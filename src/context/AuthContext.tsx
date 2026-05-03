@@ -155,7 +155,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           scope: 'repo workflow'
         })
       });
-
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`GitHub API error (${response.status}): ${errorText}`);
+      }
+      
       const data = await response.json();
       
       if (data.user_code) {
@@ -166,7 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Login failed', error);
-      alert('Login failed. Please check your connection and configuration.');
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`Login failed: ${message}`);
     }
   };
 
