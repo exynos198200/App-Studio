@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f0f0f0] text-[#1a1a1a] antialiased;
+  }
+}
+
+@layer components {
+  .vs-sidebar {
+    @apply bg-[#f3f3f3] border-r border-[#e0e0e0] flex flex-col;
+  }
+  
+  .vs-header {
+    @apply h-9 bg-[#f3f3f3] border-b border-[#e0e0e0] px-4 flex items-center text-[11px] font-bold text-[#616161] uppercase tracking-wider;
+  }
+  
+  .vs-input {
+    @apply bg-white border border-[#cecece] rounded focus:outline-none focus:ring-1 focus:ring-[#007acc] px-2 py-1;
+  }
+
+  /* Grey Button Theme */
+  .btn-grey {
+    @apply px-4 py-2 bg-[#e1e1e1] hover:bg-[#d8d8d8] text-[#333] rounded border border-[#cccccc] transition-all font-bold text-xs uppercase tracking-tight;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white rounded shadow-sm transition-all font-bold text-xs uppercase tracking-tight;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-[#333] hover:bg-black text-white rounded shadow-sm transition-all font-bold text-xs uppercase tracking-tight;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cccccc;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}

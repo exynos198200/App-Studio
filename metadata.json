@@ -1,0 +1,6 @@
+{
+  "name": "App Studio Pro",
+  "description": "A mobile app development platform with AI-assisted coding, live React Native preview, and automatic GitHub APK builds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI Agent", "VFS", "GitHub Integration", "Live Preview"]
+}

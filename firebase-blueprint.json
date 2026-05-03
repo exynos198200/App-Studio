@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Store user specific data and settings",
+      "type": "object",
+      "properties": {
+        "githubConfig": {
+          "type": "object",
+          "description": "Stored GitHub configuration"
+        },
+        "lastSynced": {
+          "type": "number"
+        }
+      }
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Represent a coding project",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "framework": { "type": "string" },
+        "files": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "framework", "files", "createdAt", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile and settings"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "User projects"
+    }
+  }
+}
