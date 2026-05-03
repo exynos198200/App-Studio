@@ -109,6 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithCredential(auth, credential);
 
       if (result.user) {
+        // Explicitly set user to trigger immediate Dashboard transition
+        setUser(result.user);
+
         // Fetch user profile to get username (owner)
         const userRes = await CapacitorHttp.request({
           url: 'https://api.github.com/user',
