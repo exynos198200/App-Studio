@@ -1,0 +1,11 @@
+{
+  "appId": "com.appstudio.pro",
+  "appName": "App Studio Pro",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "App": {
+      "launchUrl": "appstudio://callback"
+    }
+  }
+}
