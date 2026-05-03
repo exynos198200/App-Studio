@@ -28,7 +28,7 @@ jobs:
           java-version: 17
 
       - name: Install Capacitor CLI
-        run: npm install -g @capacitor/
+        run: npm install -g @capacitor/cli
 
       - name: Capacitor add android
         run: npx cap add android
