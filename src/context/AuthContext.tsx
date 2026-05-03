@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 interface DeviceFlowData {
   user_code: string;
@@ -66,16 +66,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         params.append('device_code', deviceCode);
         params.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
 
-        const response = await fetch('https://github.com/login/oauth/access_token', {
+        const response = await CapacitorHttp.request({
+          url: 'https://github.com/login/oauth/access_token',
           method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: params.toString()
+          data: params.toString()
         });
 
-        const data = await response.json();
+        const data = response.data;
 
         if (data.access_token) {
           window.clearInterval(pollIntervalRef.current!);
@@ -109,12 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (result.user) {
         // Fetch user profile to get username (owner)
-        const userRes = await fetch('https://api.github.com/user', {
+        const userRes = await CapacitorHttp.request({
+          url: 'https://api.github.com/user',
+          method: 'GET',
           headers: {
             'Authorization': `token ${token}`
           }
         });
-        const profile = await userRes.json();
+        const profile = userRes.data;
         const username = profile.login;
 
         // Update Firestore
@@ -149,21 +152,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       params.append('client_id', clientId);
       params.append('scope', 'repo workflow');
 
-      const response = await fetch('https://github.com/login/device/code', {
+      const response = await CapacitorHttp.request({
+        url: 'https://github.com/login/device/code',
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: params.toString()
+        data: params.toString()
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`GitHub API error (${response.status}): ${errorText}`);
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(`GitHub API error (${response.status}): ${JSON.stringify(response.data)}`);
       }
       
-      const data = await response.json();
+      const data = response.data;
       
       if (data.user_code) {
         setDeviceFlow(data);
