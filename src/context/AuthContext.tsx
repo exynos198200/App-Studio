@@ -8,8 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
+import { InAppBrowser } from '@capgo/inappbrowser';
 import { Capacitor } from '@capacitor/core';
 
 interface AuthContextType {
@@ -31,46 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Handle deep links for Capacitor
     if (Capacitor.isNativePlatform()) {
-      const handleAppUrl = async (data: { url: string }) => {
-        console.log('App opened with URL:', data.url);
+      InAppBrowser.addListener('urlChangeEvent', async (data) => {
+        console.log('WebView URL changed:', data.url);
         try {
-          const url = new URL(data.url);
-          // Handle both appstudio://callback and appstudio://host/callback
-          if (url.protocol === 'appstudio:' && (url.host === 'callback' || url.pathname.includes('callback'))) {
+          if (data.url.includes('appstudio://callback') || data.url.includes('code=')) {
+            const url = new URL(data.url);
             const code = url.searchParams.get('code');
+            
+            await InAppBrowser.close();
+            
             if (code) {
               await handleNativeGithubAuth(code);
             }
           }
         } catch (e) {
-          console.error('Error parsing deep link URL', e);
-        }
-      };
-
-      App.addListener('appUrlOpen', handleAppUrl);
-      
-      // Check for initial launch URL
-      App.getLaunchUrl().then((launchUrl) => {
-        if (launchUrl) {
-          console.log('App launched with URL:', launchUrl.url);
-          handleAppUrl(launchUrl);
+          console.error('Error handling WebView navigation', e);
         }
       });
-
-      if (Capacitor.isNativePlatform()) {
-        Browser.addListener('browserPageLoaded', () => {
-          console.log('WebView page loaded');
-        });
-      }
     }
 
     return () => {
       unsubscribe();
       if (Capacitor.isNativePlatform()) {
-        App.removeAllListeners();
-        Browser.removeAllListeners();
+        InAppBrowser.removeAllListeners();
       }
     };
   }, []);
@@ -135,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (Capacitor.isNativePlatform()) {
-        await Browser.close();
+        await InAppBrowser.close();
       }
     } catch (error) {
       console.error('Native GitHub Auth failed', error);
@@ -156,9 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,workflow`;
       
       if (Capacitor.isNativePlatform()) {
-        await Browser.open({ 
+        await InAppBrowser.openWebView({ 
           url: githubUrl,
-          presentationStyle: 'popover'
+          title: 'GitHub Login'
         });
       } else {
         // Fallback for pure web if needed, though redirect will go to appstudio:// callback
