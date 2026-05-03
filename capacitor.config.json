@@ -3,6 +3,13 @@
   "appName": "App Studio Pro",
   "webDir": "dist",
   "bundledWebRuntime": false,
+  "server": {
+    "allowNavigation": [
+      "github.com",
+      "*.github.com",
+      "api.github.com"
+    ]
+  },
   "plugins": {
     "App": {
       "launchUrl": "appstudio://callback"

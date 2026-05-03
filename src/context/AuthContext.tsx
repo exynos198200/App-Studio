@@ -61,17 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pollIntervalRef.current = window.setInterval(async () => {
       try {
         const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+        const params = new URLSearchParams();
+        params.append('client_id', clientId);
+        params.append('device_code', deviceCode);
+        params.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
+
         const response = await fetch('https://github.com/login/oauth/access_token', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: JSON.stringify({
-            client_id: clientId,
-            device_code: deviceCode,
-            grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
-          })
+          body: params.toString()
         });
 
         const data = await response.json();
@@ -144,16 +145,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Request device/user code
+      const params = new URLSearchParams();
+      params.append('client_id', clientId);
+      params.append('scope', 'repo workflow');
+
       const response = await fetch('https://github.com/login/device/code', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: JSON.stringify({
-          client_id: clientId,
-          scope: 'repo workflow'
-        })
+        body: params.toString()
       });
       
       if (!response.ok) {
