@@ -72,15 +72,13 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-3">
-                  <a
-                    href={deviceFlow.verification_uri}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => window.open(deviceFlow.verification_uri, '_system')}
                     className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-[0.98]"
                   >
                     Open GitHub
                     <ExternalLink size={18} />
-                  </a>
+                  </button>
                   
                   <button
                     onClick={cancelDeviceFlow}
