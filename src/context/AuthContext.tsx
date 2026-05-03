@@ -33,14 +33,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Handle deep links for Capacitor
     if (Capacitor.isNativePlatform()) {
-      App.addListener('appUrlOpen', async (data) => {
-        const url = new URL(data.url);
-        if (url.host === 'callback' || url.pathname.includes('callback')) {
-          const code = url.searchParams.get('code');
-          if (code) {
-            await handleNativeGithubAuth(code);
+      const handleAppUrl = async (data: { url: string }) => {
+        console.log('App opened with URL:', data.url);
+        try {
+          const url = new URL(data.url);
+          // Handle both appstudio://callback and appstudio://host/callback
+          if (url.protocol === 'appstudio:' && (url.host === 'callback' || url.pathname.includes('callback'))) {
+            const code = url.searchParams.get('code');
+            if (code) {
+              await handleNativeGithubAuth(code);
+            }
           }
+        } catch (e) {
+          console.error('Error parsing deep link URL', e);
         }
+      };
+
+      App.addListener('appUrlOpen', handleAppUrl);
+      
+      // Check for initial launch URL
+      App.getLaunchUrl().then((launchUrl) => {
+        if (launchUrl) {
+          console.log('App launched with URL:', launchUrl.url);
+          handleAppUrl(launchUrl);
+        }
+      });
+
+      Browser.addListener('browserFinished', () => {
+        console.log('In-app browser closed by user');
       });
     }
 
@@ -48,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
       if (Capacitor.isNativePlatform()) {
         App.removeAllListeners();
+        Browser.removeAllListeners();
       }
     };
   }, []);

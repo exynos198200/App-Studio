@@ -100,11 +100,18 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
 
   // Load github config from Firestore
   useEffect(() => {
-    if (user) {
-      firebaseService.getSettings(user.uid).then(config => {
-        setGithubConfig(config);
-      });
-    }
+    const loadSettings = () => {
+      if (user) {
+        firebaseService.getSettings(user.uid).then(config => {
+          setGithubConfig(config);
+        });
+      }
+    };
+
+    loadSettings();
+
+    window.addEventListener('github-auth-success', loadSettings);
+    return () => window.removeEventListener('github-auth-success', loadSettings);
   }, [user]);
 
   // Fetch repos when settings open
