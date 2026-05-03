@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithCredential,
@@ -8,14 +8,23 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { InAppBrowser } from '@capgo/inappbrowser';
 import { Capacitor } from '@capacitor/core';
+
+interface DeviceFlowData {
+  user_code: string;
+  device_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  deviceFlow: DeviceFlowData | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  cancelDeviceFlow: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +32,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deviceFlow, setDeviceFlow] = useState<DeviceFlowData | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -30,66 +41,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    if (Capacitor.isNativePlatform()) {
-      InAppBrowser.addListener('urlChangeEvent', async (data) => {
-        console.log('WebView URL changed:', data.url);
-        try {
-          if (data.url.includes('appstudio://callback') || data.url.includes('code=')) {
-            const url = new URL(data.url);
-            const code = url.searchParams.get('code');
-            
-            await InAppBrowser.close();
-            
-            if (code) {
-              await handleNativeGithubAuth(code);
-            }
-          }
-        } catch (e) {
-          console.error('Error handling WebView navigation', e);
-        }
-      });
-    }
-
     return () => {
       unsubscribe();
-      if (Capacitor.isNativePlatform()) {
-        InAppBrowser.removeAllListeners();
-      }
+      if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
     };
   }, []);
 
-  const handleNativeGithubAuth = async (code: string) => {
+  const cancelDeviceFlow = () => {
+    setDeviceFlow(null);
+    if (pollIntervalRef.current) {
+      window.clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const startPolling = (deviceCode: string, interval: number) => {
+    if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
+
+    pollIntervalRef.current = window.setInterval(async () => {
+      try {
+        const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+        const response = await fetch('https://github.com/login/oauth/access_token', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            client_id: clientId,
+            device_code: deviceCode,
+            grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.access_token) {
+          window.clearInterval(pollIntervalRef.current!);
+          pollIntervalRef.current = null;
+          await handleSuccessfulAuth(data.access_token);
+        } else if (data.error === 'authorization_pending') {
+          // Keep polling
+        } else if (data.error === 'slow_down') {
+          // GitHub asks to slow down, adjust polling if needed
+        } else {
+          // Other errors (expired, access_denied)
+          cancelDeviceFlow();
+          if (data.error !== 'authorization_pending') {
+             console.error('Auth error:', data.error_description || data.error);
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, (interval || 5) * 1000);
+  };
+
+  const handleSuccessfulAuth = async (token: string) => {
     try {
       setLoading(true);
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        console.error('GitHub Credentials missing in environment');
-        return;
-      }
-
-      // Exchange code for access token
-      const response = await fetch('https://github.com/login/oauth/access_token', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code: code,
-          redirect_uri: 'appstudio://callback'
-        })
-      });
-
-      const data = await response.json();
-      const token = data.access_token;
-
-      if (!token) {
-        throw new Error('No access token received from GitHub');
-      }
+      setDeviceFlow(null);
 
       // Sign in to Firebase with the GitHub token
       const credential = GithubAuthProvider.credential(token);
@@ -116,13 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Refresh local state
         window.dispatchEvent(new Event('github-auth-success'));
       }
-
-      if (Capacitor.isNativePlatform()) {
-        await InAppBrowser.close();
-      }
     } catch (error) {
-      console.error('Native GitHub Auth failed', error);
-      alert('Authentication failed. Please check logs.');
+      console.error('GitHub Auth handling failed', error);
+      alert('Failed to finalize authentication.');
     } finally {
       setLoading(false);
     }
@@ -132,24 +139,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
       if (!clientId) {
-        alert('VITE_GITHUB_CLIENT_ID is not configured in environment variables.');
+        alert('VITE_GITHUB_CLIENT_ID is not configured.');
         return;
       }
-      const redirectUri = 'appstudio://callback';
-      const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,workflow`;
+
+      // Request device/user code
+      const response = await fetch('https://github.com/login/device/code', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          scope: 'repo workflow'
+        })
+      });
+
+      const data = await response.json();
       
-      if (Capacitor.isNativePlatform()) {
-        await InAppBrowser.openWebView({ 
-          url: githubUrl,
-          title: 'GitHub Login'
-        });
+      if (data.user_code) {
+        setDeviceFlow(data);
+        startPolling(data.device_code, data.interval || 5);
       } else {
-        // Fallback for pure web if needed, though redirect will go to appstudio:// callback
-        window.location.href = githubUrl;
+        throw new Error(data.error_description || 'Failed to start device flow');
       }
     } catch (error) {
       console.error('Login failed', error);
-      throw error;
+      alert('Login failed. Please check your connection and configuration.');
     }
   };
 
@@ -162,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, deviceFlow, login, logout, cancelDeviceFlow }}>
       {children}
     </AuthContext.Provider>
   );
