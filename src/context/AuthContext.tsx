@@ -9,7 +9,6 @@ import {
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 
 interface AuthContextType {
@@ -58,17 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           handleAppUrl(launchUrl);
         }
       });
-
-      Browser.addListener('browserFinished', () => {
-        console.log('In-app browser closed by user');
-      });
     }
 
     return () => {
       unsubscribe();
       if (Capacitor.isNativePlatform()) {
         App.removeAllListeners();
-        Browser.removeAllListeners();
       }
     };
   }, []);
@@ -131,10 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Refresh local state
         window.dispatchEvent(new Event('github-auth-success'));
       }
-      
-      if (Capacitor.isNativePlatform()) {
-        await Browser.close();
-      }
     } catch (error) {
       console.error('Native GitHub Auth failed', error);
       alert('Authentication failed. Please check logs.');
@@ -154,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,workflow`;
       
       if (Capacitor.isNativePlatform()) {
-        await Browser.open({ url: githubUrl });
+        window.open(githubUrl, '_system');
       } else {
         // Fallback for pure web if needed, though redirect will go to appstudio:// callback
         window.location.href = githubUrl;
