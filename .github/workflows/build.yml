@@ -48,6 +48,9 @@ jobs:
           distribution: zulu
           java-version: 21
 
+      - name: Remove android if exists
+        run: rm -rf android
+
       - name: Capacitor add android
         run: npx cap add android
 
