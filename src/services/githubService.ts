@@ -63,20 +63,33 @@ export const githubService = {
     const headers = {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
     };
+
+    console.log('Triggering GitHub build...', { owner, repo, url });
 
     // Wait a bit after pushing files for GitHub to process the latest commit
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const res = await CapacitorHttp.request({
-      url,
-      method: 'POST',
-      headers,
-      data: { ref: 'main' },
-    });
+    try {
+      const res = await CapacitorHttp.request({
+        url,
+        method: 'POST',
+        headers,
+        data: { ref: 'main' },
+      });
 
-    if (res.status < 200 || res.status >= 300) {
-      throw new Error(`Failed to trigger build: ${res.data?.message || 'Unknown error'}`);
+      console.log('GitHub Build Trigger Response:', {
+        status: res.status,
+        data: res.data
+      });
+
+      if (res.status < 200 || res.status >= 300) {
+        throw new Error(`Failed to trigger build: ${res.status} ${JSON.stringify(res.data)}`);
+      }
+    } catch (error) {
+      console.error('Error triggering GitHub build:', error);
+      throw error;
     }
   },
 
