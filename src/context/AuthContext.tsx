@@ -27,39 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    const initAuth = () => {
       const savedUser = localStorage.getItem('app_studio_user');
       if (savedUser) {
         try {
           const parsedUser: GitHubUser = JSON.parse(savedUser);
-          
-          try {
-            // Use Promise.race to enforce timeout for CapacitorHttp
-            const authPromise = CapacitorHttp.request({
-              url: 'https://api.github.com/user',
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${parsedUser.token}`,
-                'Accept': 'application/json'
-              }
-            });
-
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('TIMEOUT')), 5000)
-            );
-
-            const response = await Promise.race([authPromise, timeoutPromise]) as any;
-
-            if (response.status === 200) {
-              setUser(parsedUser);
-            } else {
-              console.warn('Saved token invalid, clearing session');
-              localStorage.removeItem('app_studio_user');
-            }
-          } catch (e) {
-            console.error('Session validation failed or timed out', e);
-            localStorage.removeItem('app_studio_user');
-          }
+          setUser(parsedUser);
         } catch (e) {
           console.error('Failed to parse saved user', e);
           localStorage.removeItem('app_studio_user');
