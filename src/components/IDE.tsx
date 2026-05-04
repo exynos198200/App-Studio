@@ -228,11 +228,11 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
         <div className="pb-4 flex flex-col items-center gap-4">
            {user && (
              <div className="flex flex-col items-center gap-3 border-b border-white/5 pb-4 mb-2">
-               {user.photoURL ? (
-                 <img src={user.photoURL} alt={user.displayName || ''} className="w-6 h-6 rounded-full ring-1 ring-white/10" />
+               {user.avatar_url ? (
+                 <img src={user.avatar_url} alt={user.login} className="w-7 h-7 rounded-lg ring-1 ring-white/10 shadow-lg" />
                ) : (
-                 <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                   <UserIcon size={12} className="text-blue-400" />
+                 <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                   <UserIcon size={14} className="text-blue-400" />
                  </div>
                )}
                <button 
@@ -285,8 +285,8 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
           <div className="flex gap-1 items-center">
             {user && (
               <div className="flex items-center mr-2">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full ring-1 ring-white/20" />
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="w-6 h-6 rounded-lg ring-1 ring-white/20" />
                 ) : (
                   <UserIcon size={14} className="text-gray-400" />
                 )}
@@ -432,10 +432,10 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Connected Account</p>
                 <div className="flex items-center gap-3">
-                  {user?.photoURL && <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full shadow-sm" />}
+                  {user?.avatar_url && <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-lg shadow-sm" />}
                   <div>
-                    <p className="text-xs font-bold text-blue-900">{user?.displayName || 'GitHub User'}</p>
-                    <p className="text-[10px] text-blue-400 font-medium tracking-tight">Token managed automatically</p>
+                    <p className="text-xs font-bold text-blue-900">{user?.login || 'GitHub User'}</p>
+                    <p className="text-[10px] text-blue-400 font-medium tracking-tight">Personal Access Token</p>
                   </div>
                 </div>
               </div>

@@ -1,159 +1,98 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
-  onAuthStateChanged, 
-  signInWithCredential,
   signOut, 
-  User,
-  GithubAuthProvider
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import { App } from '@capacitor/app';
+import { CapacitorHttp } from '@capacitor/core';
+
+export interface GitHubUser {
+  uid: string; // GitHub ID stringified
+  login: string;
+  avatar_url: string;
+  token: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: GitHubUser | null;
   loading: boolean;
-  login: () => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<GitHubUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Handle incoming App Links (Deep Links)
-    const setupDeepLinkListener = async () => {
-      App.addListener('appUrlOpen', async (data: any) => {
-        console.log('App URL opened:', data.url);
-        const url = new URL(data.url);
-        
-        // Check if the URL matches our callback
-        if (url.pathname === '/callback' || url.hostname === 'exynos198200.github.io') {
-          const code = url.searchParams.get('code');
-          if (code) {
-            await handleNativeGithubAuth(code);
-          }
-        }
-      });
-    };
-
-    setupDeepLinkListener();
-
-    return () => {
-      unsubscribe();
-      App.removeAllListeners();
-    };
+    // Check for existing session in localStorage
+    const savedUser = localStorage.getItem('app_studio_user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Failed to parse saved user', e);
+        localStorage.removeItem('app_studio_user');
+      }
+    }
+    setLoading(false);
   }, []);
 
-  const handleNativeGithubAuth = async (code: string) => {
+  const loginWithToken = async (token: string) => {
     try {
       setLoading(true);
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        throw new Error('GitHub Client ID or Secret not configured');
-      }
-
-      // Exchange code for token
-      const params = new URLSearchParams();
-      params.append('client_id', clientId);
-      params.append('client_secret', clientSecret);
-      params.append('code', code);
-      params.append('redirect_uri', 'https://exynos198200.github.io/callback');
-
+      
       const response = await CapacitorHttp.request({
-        url: 'https://github.com/login/oauth/access_token',
-        method: 'POST',
+        url: 'https://api.github.com/user',
+        method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        data: params.toString()
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
       });
 
-      const data = response.data;
-      if (data.access_token) {
-        await handleSuccessfulAuth(data.access_token);
-      } else {
-        throw new Error(data.error_description || 'Failed to get access token');
+      if (response.status !== 200) {
+        throw new Error('Invalid token or GitHub API error');
       }
+
+      const profile = response.data;
+      const githubUser: GitHubUser = {
+        uid: String(profile.id),
+        login: profile.login,
+        avatar_url: profile.avatar_url,
+        token: token
+      };
+
+      // Save to state and localStorage
+      setUser(githubUser);
+      localStorage.setItem('app_studio_user', JSON.stringify(githubUser));
+
+      // Sync settings to Firestore to ensure "owner" and "token" are updated for deployment tasks
+      await firebaseService.saveSettings(githubUser.uid, {
+        token: token,
+        owner: profile.login,
+        repo: ''
+      });
+
+      // Notify other components if needed
+      window.dispatchEvent(new Event('github-auth-success'));
+      
     } catch (error) {
-      console.error('Native GitHub Auth failed:', error);
-      alert('Authentication failed. Please try again.');
+      console.error('Token login failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSuccessfulAuth = async (token: string) => {
-    try {
-      // Sign in to Firebase with the GitHub token
-      const credential = GithubAuthProvider.credential(token);
-      const result = await signInWithCredential(auth, credential);
-
-      if (result.user) {
-        setUser(result.user);
-
-        // Fetch user profile to get username
-        const userRes = await CapacitorHttp.request({
-          url: 'https://api.github.com/user',
-          method: 'GET',
-          headers: {
-            'Authorization': `token ${token}`
-          }
-        });
-        const profile = userRes.data;
-        const username = profile.login;
-
-        // Update Firestore
-        const currentSettings = await firebaseService.getSettings(result.user.uid);
-        await firebaseService.saveSettings(result.user.uid, {
-          token,
-          owner: currentSettings?.owner || username || '',
-          repo: currentSettings?.repo || ''
-        });
-        
-        // Refresh local state
-        window.dispatchEvent(new Event('github-auth-success'));
-      }
-    } catch (error) {
-      console.error('Finalizing auth failed:', error);
-      alert('Failed to finalize authentication.');
-    }
-  };
-
-  const login = async () => {
-    try {
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-      if (!clientId) {
-        alert('VITE_GITHUB_CLIENT_ID is not configured.');
-        return;
-      }
-
-      const redirectUri = encodeURIComponent('https://exynos198200.github.io/callback');
-      const scope = encodeURIComponent('repo workflow');
-      const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
-
-      // Open in system browser
-      window.open(authUrl, '_system');
-    } catch (error) {
-      console.error('Login launch failed', error);
-      alert('Could not launch GitHub login.');
-    }
-  };
-
   const logout = async () => {
     try {
+      localStorage.removeItem('app_studio_user');
+      setUser(null);
+      // We don't necessarily need to sign out of Firebase if we're not heavily using it for auth,
+      // but let's keep it clean.
       await signOut(auth);
     } catch (error) {
       console.error('Logout failed', error);
@@ -161,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

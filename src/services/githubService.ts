@@ -1,9 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { GitHubConfig, FileNode } from '../types';
+import { CapacitorHttp } from '@capacitor/core';
 
 export const githubService = {
   pushProject: async (config: GitHubConfig, files: FileNode[]) => {
@@ -24,10 +20,13 @@ export const githubService = {
       // Get current SHA if file exists
       let sha: string | undefined;
       try {
-        const res = await fetch(`${baseUrl}/contents/${path}`, { headers });
-        if (res.ok) {
-          const data = await res.json();
-          sha = data.sha;
+        const res = await CapacitorHttp.request({
+          url: `${baseUrl}/contents/${path}`,
+          method: 'GET',
+          headers
+        });
+        if (res.status === 200) {
+          sha = res.data.sha;
         }
       } catch (e) {}
 
@@ -40,15 +39,15 @@ export const githubService = {
         sha,
       };
 
-      const res = await fetch(`${baseUrl}/contents/${path}`, {
+      const res = await CapacitorHttp.request({
+        url: `${baseUrl}/contents/${path}`,
         method: 'PUT',
         headers,
-        body: JSON.stringify(body),
+        data: body,
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(`Failed to upload ${path}: ${err.message}`);
+      if (res.status < 200 || res.status >= 300) {
+        throw new Error(`Failed to upload ${path}: ${res.data?.message || 'Unknown error'}`);
       }
     };
 
@@ -69,15 +68,15 @@ export const githubService = {
     // Wait a bit after pushing files for GitHub to process the latest commit
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const res = await fetch(url, {
+    const res = await CapacitorHttp.request({
+      url,
       method: 'POST',
       headers,
-      body: JSON.stringify({ ref: 'main' }),
+      data: { ref: 'main' },
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(`Failed to trigger build: ${err.message}`);
+    if (res.status < 200 || res.status >= 300) {
+      throw new Error(`Failed to trigger build: ${res.data?.message || 'Unknown error'}`);
     }
   },
 
@@ -89,10 +88,13 @@ export const githubService = {
       Accept: 'application/vnd.github.v3+json',
     };
 
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.workflow_runs[0];
+    const res = await CapacitorHttp.request({
+      url,
+      method: 'GET',
+      headers
+    });
+    if (res.status !== 200) return null;
+    return res.data.workflow_runs[0];
   },
 
   getUserRepos: async (token: string) => {
@@ -101,10 +103,14 @@ export const githubService = {
       Accept: 'application/vnd.github.v3+json',
     };
     
-    const res = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', { headers });
-    if (!res.ok) {
+    const res = await CapacitorHttp.request({
+      url: 'https://api.github.com/user/repos?per_page=100&sort=updated',
+      method: 'GET',
+      headers
+    });
+    if (res.status !== 200) {
       throw new Error('Failed to fetch repositories');
     }
-    return res.json();
+    return res.data;
   }
 };

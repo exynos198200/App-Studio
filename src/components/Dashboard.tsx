@@ -59,8 +59,8 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
           <div className="md:hidden">
             {user && (
               <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-2 py-1.5 shadow-sm">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-6 h-6 rounded-full" />
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="w-6 h-6 rounded-full border border-gray-100" />
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-[#f3f3f3] flex items-center justify-center">
                     <UserIcon size={12} className="text-gray-400" />
@@ -82,28 +82,32 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
           {/* Desktop User Profile (hidden on mobile) */}
           <div className="hidden md:block">
             {user && (
-              <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm">
+              <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 shadow-sm">
                 <div className="flex items-center gap-3">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full" />
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="" className="w-10 h-10 rounded-xl border border-gray-100 shadow-sm" />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#f3f3f3] flex items-center justify-center">
-                      <UserIcon size={16} className="text-gray-400" />
+                    <div className="w-10 h-10 rounded-xl bg-[#f3f3f3] flex items-center justify-center">
+                      <UserIcon size={20} className="text-gray-400" />
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[#1a1a1a]">
-                      {user.displayName || 'Developer'}
+                    <p className="text-[11px] font-black uppercase tracking-widest text-[#1a1a1a]">
+                      {user.login}
                     </p>
-                    <p className="text-[8px] font-medium text-gray-400 uppercase tracking-tight">Connected</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <p className="text-[9px] font-bold text-green-600 uppercase tracking-tight">Active Session</p>
+                    </div>
                   </div>
                 </div>
+                <div className="w-px h-8 bg-gray-100 mx-1" />
                 <button 
                   onClick={logout}
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                   title="Sign Out"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={20} />
                 </button>
               </div>
             )}
