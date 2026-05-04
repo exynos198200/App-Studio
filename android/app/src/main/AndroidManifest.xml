@@ -30,6 +30,14 @@
                 <data android:scheme="appstudio" android:host="callback" />
             </intent-filter>
 
+            <!-- App Link for GitHub OAuth Callback -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="exynos198200.github.io" android:pathPrefix="/callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

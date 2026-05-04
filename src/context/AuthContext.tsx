@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithCredential,
@@ -9,22 +9,13 @@ import {
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
-
-interface DeviceFlowData {
-  user_code: string;
-  device_code: string;
-  verification_uri: string;
-  expires_in: number;
-  interval: number;
-}
+import { App } from '@capacitor/app';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  deviceFlow: DeviceFlowData | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  cancelDeviceFlow: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,8 +23,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [deviceFlow, setDeviceFlow] = useState<DeviceFlowData | null>(null);
-  const pollIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -41,78 +30,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Handle incoming App Links (Deep Links)
+    const setupDeepLinkListener = async () => {
+      App.addListener('appUrlOpen', async (data: any) => {
+        console.log('App URL opened:', data.url);
+        const url = new URL(data.url);
+        
+        // Check if the URL matches our callback
+        if (url.pathname === '/callback' || url.hostname === 'exynos198200.github.io') {
+          const code = url.searchParams.get('code');
+          if (code) {
+            await handleNativeGithubAuth(code);
+          }
+        }
+      });
+    };
+
+    setupDeepLinkListener();
+
     return () => {
       unsubscribe();
-      if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
+      App.removeAllListeners();
     };
   }, []);
 
-  const cancelDeviceFlow = () => {
-    setDeviceFlow(null);
-    if (pollIntervalRef.current) {
-      window.clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-  };
+  const handleNativeGithubAuth = async (code: string) => {
+    try {
+      setLoading(true);
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET;
 
-  const startPolling = (deviceCode: string, interval: number) => {
-    if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
-
-    pollIntervalRef.current = window.setInterval(async () => {
-      try {
-        const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
-        const params = new URLSearchParams();
-        params.append('client_id', clientId);
-        params.append('device_code', deviceCode);
-        params.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
-
-        const response = await CapacitorHttp.request({
-          url: 'https://github.com/login/oauth/access_token',
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          data: params.toString()
-        });
-
-        const data = response.data;
-
-        if (data.access_token) {
-          window.clearInterval(pollIntervalRef.current!);
-          pollIntervalRef.current = null;
-          await handleSuccessfulAuth(data.access_token);
-        } else if (data.error === 'authorization_pending') {
-          // Keep polling
-        } else if (data.error === 'slow_down') {
-          // GitHub asks to slow down, adjust polling if needed
-        } else {
-          // Other errors (expired, access_denied)
-          cancelDeviceFlow();
-          if (data.error !== 'authorization_pending') {
-             console.error('Auth error:', data.error_description || data.error);
-          }
-        }
-      } catch (error) {
-        console.error('Polling error:', error);
+      if (!clientId || !clientSecret) {
+        throw new Error('GitHub Client ID or Secret not configured');
       }
-    }, (interval || 5) * 1000);
+
+      // Exchange code for token
+      const params = new URLSearchParams();
+      params.append('client_id', clientId);
+      params.append('client_secret', clientSecret);
+      params.append('code', code);
+      params.append('redirect_uri', 'https://exynos198200.github.io/callback');
+
+      const response = await CapacitorHttp.request({
+        url: 'https://github.com/login/oauth/access_token',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data: params.toString()
+      });
+
+      const data = response.data;
+      if (data.access_token) {
+        await handleSuccessfulAuth(data.access_token);
+      } else {
+        throw new Error(data.error_description || 'Failed to get access token');
+      }
+    } catch (error) {
+      console.error('Native GitHub Auth failed:', error);
+      alert('Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSuccessfulAuth = async (token: string) => {
     try {
-      setLoading(true);
-      setDeviceFlow(null);
-
       // Sign in to Firebase with the GitHub token
       const credential = GithubAuthProvider.credential(token);
       const result = await signInWithCredential(auth, credential);
 
       if (result.user) {
-        // Explicitly set user to trigger immediate Dashboard transition
         setUser(result.user);
 
-        // Fetch user profile to get username (owner)
+        // Fetch user profile to get username
         const userRes = await CapacitorHttp.request({
           url: 'https://api.github.com/user',
           method: 'GET',
@@ -135,10 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.dispatchEvent(new Event('github-auth-success'));
       }
     } catch (error) {
-      console.error('GitHub Auth handling failed', error);
+      console.error('Finalizing auth failed:', error);
       alert('Failed to finalize authentication.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -150,37 +140,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Request device/user code
-      const params = new URLSearchParams();
-      params.append('client_id', clientId);
-      params.append('scope', 'repo workflow');
+      const redirectUri = encodeURIComponent('https://exynos198200.github.io/callback');
+      const scope = encodeURIComponent('repo workflow');
+      const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 
-      const response = await CapacitorHttp.request({
-        url: 'https://github.com/login/device/code',
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        data: params.toString()
-      });
-      
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error(`GitHub API error (${response.status}): ${JSON.stringify(response.data)}`);
-      }
-      
-      const data = response.data;
-      
-      if (data.user_code) {
-        setDeviceFlow(data);
-        startPolling(data.device_code, data.interval || 5);
-      } else {
-        throw new Error(data.error_description || 'Failed to start device flow');
-      }
+      // Open in system browser
+      window.open(authUrl, '_system');
     } catch (error) {
-      console.error('Login failed', error);
-      const message = error instanceof Error ? error.message : String(error);
-      alert(`Login failed: ${message}`);
+      console.error('Login launch failed', error);
+      alert('Could not launch GitHub login.');
     }
   };
 
@@ -193,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, deviceFlow, login, logout, cancelDeviceFlow }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
