@@ -1,70 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 0. Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // 3. Primitives
-    function isSignedIn() {
-      return request.auth != null; // Verified email check could be added if mandatory
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    // 2. Validation Blueprints
-    function isValidProject(data) {
-      return data.keys().hasAll(['name', 'framework', 'files', 'createdAt', 'userId'])
-             && data.name is string && data.name.size() > 0 && data.name.size() <= 128
-             && data.framework is string && data.framework.size() <= 64
-             && data.files is list && data.files.size() <= 500
-             && (data.files.size() == 0 || data.files[0] is map)
-             && data.userId == request.auth.uid
-             && (!data.keys().hasAll(['updatedAt']) || data.updatedAt is number);
-    }
-
-    function isValidUser(data) {
-      return data.keys().size() <= 3
-             && (!data.keys().hasAll(['githubConfig']) || (data.githubConfig is map))
-             && (!data.keys().hasAll(['lastSynced']) || data.lastSynced is number);
-    }
-
-    // 4. Match Blocks
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow write: if isOwner(userId) && isValidUser(incoming());
-
-      match /projects/{projectId} {
-        // 8. Secure List Queries
-        allow list: if isOwner(userId);
-        allow get: if isOwner(userId);
-        
-        // pillar 1/2: Relational Sync and Blueprint
-        allow create: if isOwner(userId) && isValidId(projectId) && isValidProject(incoming());
-        
-        // pillar 4/9: Tiered Identity and Immortality
-        allow update: if isOwner(userId) 
-                      && isValidProject(incoming())
-                      && incoming().userId == existing().userId
-                      && incoming().createdAt == existing().createdAt;
-                      
-        allow delete: if isOwner(userId);
-      }
+    match /users/{userId}/{document=**} {
+      allow read, write: if true;
     }
   }
 }

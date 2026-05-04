@@ -67,10 +67,20 @@ export default function App() {
   }
 
   const handleCreateProject = async (name: string, framework: Framework) => {
-    const newProject = INITIAL_PROJECT(name, framework);
-    await firebaseService.saveProject(user.uid, newProject);
-    setProjects([...projects, newProject]);
-    setCurrentProjectId(newProject.id);
+    console.log('Creating project:', name, framework);
+    try {
+      const newProject = INITIAL_PROJECT(name, framework);
+      console.log('Project object created:', newProject.id);
+      
+      await firebaseService.saveProject(user.uid, newProject);
+      console.log('Project saved to Firebase successfully');
+      
+      setProjects([...projects, newProject]);
+      setCurrentProjectId(newProject.id);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      alert('Error creating project. Check console for details.');
+    }
   };
 
   const handleDeleteProject = async (id: string) => {

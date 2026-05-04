@@ -57,14 +57,18 @@ function cleanData(obj: any): any {
 export const firebaseService = {
   async saveProject(userId: string, project: Project) {
     const path = `users/${userId}/projects/${project.id}`;
+    console.log('FirebaseService: Saving project to path:', path);
     try {
       const data = cleanData({
         ...project,
         userId,
         updatedAt: Date.now()
       });
+      console.log('FirebaseService: Data to save:', data);
       await setDoc(doc(db, path), data);
+      console.log('FirebaseService: setDoc successful');
     } catch (error) {
+      console.error('FirebaseService: Error in saveProject:', error);
       handleFirestoreError(error, OperationType.WRITE, path);
     }
   },

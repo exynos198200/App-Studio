@@ -1,13 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  signOut, 
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { CapacitorHttp } from '@capacitor/core';
 
 export interface GitHubUser {
-  uid: string; // GitHub ID stringified
+  uid: string; // This will be the GitHub ID for Firestore paths
   login: string;
   avatar_url: string;
   token: string;
@@ -27,26 +23,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = () => {
-      const savedUser = localStorage.getItem('app_studio_user');
-      if (savedUser) {
-        try {
-          const parsedUser: GitHubUser = JSON.parse(savedUser);
-          setUser(parsedUser);
-        } catch (e) {
-          console.error('Failed to parse saved user', e);
-          localStorage.removeItem('app_studio_user');
-        }
+    // Check for existing session in localStorage
+    const savedUser = localStorage.getItem('app_studio_user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Failed to parse saved user', e);
+        localStorage.removeItem('app_studio_user');
       }
-      setLoading(false);
-    };
-
-    initAuth();
+    }
+    setLoading(false);
   }, []);
 
   const loginWithToken = async (token: string) => {
     try {
       setLoading(true);
+      console.log('Verifying GitHub token...');
       
       const response = await CapacitorHttp.request({
         url: 'https://api.github.com/user',
@@ -62,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const profile = response.data;
+      console.log('GitHub user verified:', profile.login);
+
       const githubUser: GitHubUser = {
         uid: String(profile.id),
         login: profile.login,
@@ -70,21 +65,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       // Save to state and localStorage
-      setUser(githubUser);
       localStorage.setItem('app_studio_user', JSON.stringify(githubUser));
+      setUser(githubUser);
 
-      // Sync settings to Firestore to ensure "owner" and "token" are updated for deployment tasks
+      // Sync settings to Firestore using GitHub ID
       await firebaseService.saveSettings(githubUser.uid, {
         token: token,
         owner: profile.login,
         repo: ''
       });
 
-      // Notify other components if needed
       window.dispatchEvent(new Event('github-auth-success'));
       
     } catch (error) {
-      console.error('Token login failed:', error);
+      console.error('Login failed:', error);
+      alert(error instanceof Error ? error.message : 'Login failed');
       throw error;
     } finally {
       setLoading(false);
@@ -92,15 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      localStorage.removeItem('app_studio_user');
-      setUser(null);
-      // We don't necessarily need to sign out of Firebase if we're not heavily using it for auth,
-      // but let's keep it clean.
-      await signOut(auth);
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
+    localStorage.removeItem('app_studio_user');
+    setUser(null);
   };
 
   return (
