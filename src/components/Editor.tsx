@@ -11,6 +11,11 @@ export default function Editor({ content, onChange }: EditorProps) {
 
   // Handle Tab key
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Log key presses for debugging
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      console.log('Key down:', e.key);
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = e.currentTarget.selectionStart;
@@ -56,7 +61,15 @@ export default function Editor({ content, onChange }: EditorProps) {
       <textarea
         ref={textareaRef}
         value={content}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          console.log('Editor onChange: value length', e.target.value.length);
+          onChange(e.target.value);
+        }}
+        onPaste={(e) => {
+          console.log('Editor onPaste triggered');
+          // Standard behavior should work with controlled component, 
+          // but we log it to confirm the event happens.
+        }}
         onKeyDown={handleKeyDown}
         spellCheck={false}
         className="flex-1 w-full h-full p-4 bg-transparent text-[#d4d4d4] font-mono text-sm outline-none resize-none no-scrollbar leading-relaxed"

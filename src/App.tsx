@@ -88,9 +88,14 @@ export default function App() {
     setProjects(projects.filter(p => p.id !== id));
   };
 
-  const handleUpdateProject = async (project: Project) => {
-    await firebaseService.saveProject(user.uid, project);
-    setProjects(projects.map(p => p.id === project.id ? project : p));
+  const handleUpdateProject = (project: Project) => {
+    // Update local state immediately for UI responsiveness
+    setProjects(projects => projects.map(p => p.id === project.id ? project : p));
+    
+    // Save to Firestore in the background
+    firebaseService.saveProject(user.uid, project).catch(error => {
+      console.error('Failed to auto-save project:', error);
+    });
   };
 
   const currentProject = projects.find(p => p.id === currentProjectId);
