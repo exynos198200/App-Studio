@@ -87,7 +87,7 @@ const translations = {
 };
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => localStorage.getItem('app_theme') as Theme || 'dark');
+  const [theme] = useState<Theme>('light');
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem('app_lang') as Language || 'en');
   const [aiSettings, setAISettings] = useState<AISettings>(() => {
     const saved = localStorage.getItem('app_ai_settings');
@@ -95,13 +95,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   useEffect(() => {
-    localStorage.setItem('app_theme', theme);
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    document.documentElement.classList.remove('dark');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('app_lang', language);
@@ -116,7 +111,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <SettingsContext.Provider value={{ theme, language, aiSettings, setTheme, setLanguage, setAISettings, t }}>
+    <SettingsContext.Provider value={{ theme, language, aiSettings, setTheme: () => {}, setLanguage, setAISettings, t }}>
       {children}
     </SettingsContext.Provider>
   );

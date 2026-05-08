@@ -60,10 +60,10 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
       <header className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-12">
         <div className="flex justify-between items-start w-full md:w-auto">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-[#1a1a1a] dark:text-white tracking-tight uppercase italic">
+            <h1 className="text-2xl sm:text-3xl font-black text-[#1a1a1a] tracking-tight uppercase italic">
               {t('dashboard.title')}
             </h1>
-            <p className="text-[#666] dark:text-gray-400 mt-1 font-medium text-xs sm:text-sm">{t('dashboard.subtitle')}</p>
+            <p className="text-[#666] mt-1 font-medium text-xs sm:text-sm">{t('dashboard.subtitle')}</p>
           </div>
           
           {/* Mobile User Profile (only shown when not on desktop) */}
@@ -126,7 +126,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#1a1a1a] dark:bg-white dark:text-black hover:bg-[#333] text-white px-4 sm:px-6 py-3 rounded-lg font-black text-[10px] sm:text-xs tracking-widest transition-all shadow-xl shadow-gray-200/50 uppercase whitespace-nowrap"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-[#333] text-white px-4 sm:px-6 py-3 rounded-lg font-black text-[10px] sm:text-xs tracking-widest transition-all shadow-xl shadow-gray-200/50 uppercase whitespace-nowrap"
           >
             <Plus size={18} strokeWidth={3} />
             {t('dashboard.create')}
@@ -141,7 +141,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
           placeholder={t('dashboard.filter')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-[#e8e8e8] dark:bg-[#262626] dark:text-white border border-transparent rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:bg-white dark:focus:bg-[#333] focus:ring-1 focus:ring-gray-300 transition-all placeholder:text-gray-500 text-sm font-medium"
+          className="w-full bg-[#e8e8e8] border border-transparent rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all placeholder:text-gray-500 text-sm font-medium"
         />
       </div>
 
@@ -154,11 +154,11 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="group relative bg-[#f5f5f5] dark:bg-[#1a1a1a] border border-[#e0e0e0] dark:border-[#333] rounded-2xl p-8 hover:border-gray-500 hover:bg-white dark:hover:bg-[#262626] hover:shadow-2xl transition-all cursor-pointer"
+              className="group relative bg-[#f5f5f5] border border-[#e0e0e0] rounded-2xl p-8 hover:border-gray-500 hover:bg-white hover:shadow-2xl transition-all cursor-pointer"
               onClick={() => onSelectProject(project.id)}
             >
               <div className="flex justify-between items-start mb-8">
-                <div className={`p-4 rounded-xl bg-white dark:bg-[#333] border border-gray-100 dark:border-gray-800 shadow-sm text-gray-600 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white group-hover:scale-110 transition-all`}>
+                <div className={`p-4 rounded-xl bg-white border border-gray-100 shadow-sm text-gray-600 group-hover:text-black group-hover:scale-110 transition-all`}>
                   {project.framework === 'node-server' ? <FolderCode size={24} /> : <Smartphone size={24} />}
                 </div>
                 <div className="flex gap-2">
@@ -205,12 +205,12 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                 </div>
               </div>
 
-              <h3 className="text-xl font-black text-[#1a1a1a] dark:text-white mb-2 uppercase tracking-tight">{project.name}</h3>
+              <h3 className="text-xl font-black text-[#1a1a1a] mb-2 uppercase tracking-tight">{project.name}</h3>
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black uppercase bg-[#1a1a1a] dark:bg-white dark:text-black text-white px-2 py-0.5 rounded tracking-widest">
+                <span className="text-[10px] font-black uppercase bg-[#1a1a1a] text-white px-2 py-0.5 rounded tracking-widest">
                   {project.framework}
                 </span>
-                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
                   <Calendar size={10} />
                   {format(project.updatedAt, 'MMM d')}
                 </span>
@@ -222,16 +222,16 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
 
       {projects.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-32 h-32 bg-[#eeeeee] dark:bg-[#1a1a1a] rounded-full flex items-center justify-center mb-10 shadow-inner">
-            <Smartphone size={48} className="text-gray-300 dark:text-gray-700" />
+          <div className="w-32 h-32 bg-[#eeeeee] rounded-full flex items-center justify-center mb-10 shadow-inner">
+            <Smartphone size={48} className="text-gray-300" />
           </div>
-          <h2 className="text-2xl font-black text-[#1a1a1a] dark:text-white uppercase italic tracking-tighter">{t('dashboard.no_projects')}</h2>
+          <h2 className="text-2xl font-black text-[#1a1a1a] uppercase italic tracking-tighter">{t('dashboard.no_projects')}</h2>
           <p className="text-gray-400 mt-3 max-w-sm leading-relaxed font-medium">
             {t('dashboard.no_projects_desc')}
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="mt-10 px-10 py-4 bg-[#1a1a1a] dark:bg-white dark:text-black hover:bg-black text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
+            className="mt-10 px-10 py-4 bg-[#1a1a1a] hover:bg-black text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
           >
             {t('dashboard.create')}
           </button>
@@ -243,9 +243,9 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-2xl p-8 w-full max-w-2xl shadow-3xl overflow-y-auto max-h-[90vh] no-scrollbar"
+            className="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-2xl shadow-3xl overflow-y-auto max-h-[90vh] no-scrollbar"
           >
-            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-b border-gray-100 dark:border-gray-800 pb-4">{t('dashboard.new_project')}</h2>
+            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-b border-gray-100 pb-4">{t('dashboard.new_project')}</h2>
             <div className="space-y-8">
               <div>
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">{t('dashboard.project_name')}</label>
@@ -254,7 +254,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-[#f3f3f3] dark:bg-[#262626] dark:text-white border-none rounded-lg px-5 py-4 focus:outline-none focus:bg-[#e0e0e0] dark:focus:bg-[#333] transition-all font-bold text-gray-900 placeholder:text-gray-300"
+                  className="w-full bg-[#f3f3f3] border-none rounded-lg px-5 py-4 focus:outline-none focus:bg-[#e0e0e0] transition-all font-bold text-gray-900 placeholder:text-gray-300"
                   placeholder="MY_PROJECT..."
                 />
               </div>
@@ -268,15 +268,15 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                       onClick={() => setSelectedFramework(template.id)}
                       className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all ${
                         selectedFramework === template.id 
-                          ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-[#262626]' 
-                          : 'border-transparent bg-gray-100 dark:bg-[#1a1a1a] hover:bg-gray-200 dark:hover:bg-[#333]'
+                          ? 'border-gray-900 bg-gray-50' 
+                          : 'border-transparent bg-gray-100 hover:bg-gray-200'
                       }`}
                     >
-                      <div className={selectedFramework === template.id ? 'text-black dark:text-white scale-110 transition-transform' : 'text-gray-400'}>
+                      <div className={selectedFramework === template.id ? 'text-black scale-110 transition-transform' : 'text-gray-400'}>
                         {template.icon}
                       </div>
                       <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        selectedFramework === template.id ? 'text-black dark:text-white' : 'text-gray-500'
+                        selectedFramework === template.id ? 'text-black' : 'text-gray-500'
                       }`}>
                         {template.label}
                       </span>
@@ -288,7 +288,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
               <div className="flex gap-4 pt-4">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-black dark:hover:text-white transition-colors"
+                  className="flex-1 px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-black transition-colors"
                 >
                   {t('dashboard.cancel')}
                 </button>
@@ -299,7 +299,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                     setIsModalOpen(false);
                     setNewName('');
                   }}
-                  className="flex-1 px-4 py-4 bg-[#1a1a1a] dark:bg-white dark:text-black hover:bg-black disabled:opacity-30 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-gray-900/20"
+                  className="flex-1 px-4 py-4 bg-[#1a1a1a] hover:bg-black disabled:opacity-30 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-gray-900/20"
                 >
                   {t('dashboard.create')}
                 </button>

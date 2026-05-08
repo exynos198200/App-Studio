@@ -85,10 +85,12 @@ const createInitialFiles = (framework: Framework, name: string): FileNode[] => {
     });
   };
 
-  // Add GitHub Workflow
-  addFile('github-folder', '.github', '', null, 'folder');
-  addFile('workflows-folder', 'workflows', '', 'github-folder', 'folder');
-  addFile('build-workflow', 'build.yml', GITHUB_BUILD_WORKFLOW(framework), 'workflows-folder', 'file');
+  // Add GitHub Workflow only for supported frameworks
+  if (framework === 'react-vite' || framework === 'kotlin-android') {
+    addFile('github-folder', '.github', '', null, 'folder');
+    addFile('workflows-folder', 'workflows', '', 'github-folder', 'folder');
+    addFile('build-workflow', 'build.yml', GITHUB_BUILD_WORKFLOW(framework), 'workflows-folder', 'file');
+  }
 
   if (framework === 'react-vite') {
     addFile('1', 'package.json', JSON.stringify({
