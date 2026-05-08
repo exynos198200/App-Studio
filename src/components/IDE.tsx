@@ -40,49 +40,6 @@ import { githubService } from '../services/githubService';
 import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebaseService';
 
-// Memoized Repository List to prevent re-renders on scroll
-const RepoList = React.memo(({ repos, githubConfig, onSelect }: { repos: any[], githubConfig: GitHubConfig | null, onSelect: (repo: any) => void }) => {
-  return (
-    <div className="space-y-1">
-      {repos.map(repo => {
-        const isSelected = githubConfig?.owner === repo.owner.login && githubConfig?.repo === repo.name;
-        return (
-          <button
-            key={repo.id}
-            onClick={() => onSelect(repo)}
-            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-200 ${
-              isSelected 
-                ? 'bg-blue-50 border-2 border-blue-100' 
-                : 'bg-white hover:bg-gray-50 border-2 border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-4 text-left">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-400'
-              }`}>
-                <Folder size={20} />
-              </div>
-              <div>
-                <p className={`text-sm font-bold ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                  {repo.name}
-                </p>
-                <p className="text-[10px] text-gray-400 font-medium">
-                  {repo.owner.login} • {repo.private ? 'Private' : 'Public'}
-                </p>
-              </div>
-            </div>
-            {isSelected && (
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                <Check size={14} className="text-white" />
-              </div>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-});
-
 interface IDEProps {
   project: Project;
   onUpdateProject: (project: Project) => void;
@@ -151,7 +108,10 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
     }
   };
 
-  const activeFile = project.files.find(f => f.id === activeFileId);
+  if (!project) return null;
+
+  const files = project.files || [];
+  const activeFile = files.find(f => f.id === activeFileId);
 
   const handleRepoSelect = React.useCallback((repo: any) => {
     setGithubConfig(prev => ({ 
@@ -159,7 +119,6 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
       owner: repo.owner.login, 
       repo: repo.name 
     }));
-    setIsRepoSheetOpen(false);
   }, []);
 
   // Poll build status
@@ -198,7 +157,7 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
 
   const handleFileChange = (newContent: string) => {
     if (!activeFileId) return;
-    const updatedFiles = project.files.map(f => 
+    const updatedFiles = files.map(f => 
       f.id === activeFileId ? { ...f, content: newContent } : f
     );
     onUpdateProject({ ...project, files: updatedFiles, updatedAt: Date.now() });
@@ -206,14 +165,14 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
 
   const handleBuild = async () => {
     if (!githubConfig) {
-      setIsGithubModalOpen(true);
+      setIsSettingsOpen(true);
       return;
     }
     const now = Date.now();
     const actionUrl = `https://github.com/${githubConfig.owner}/${githubConfig.repo}/actions`;
     setBuildStatus({ status: 'queued', triggeredAt: now, artifactUrl: actionUrl });
     try {
-      await githubService.pushProject(githubConfig, project.files);
+      await githubService.pushProject(githubConfig, files);
       await githubService.triggerBuild(githubConfig);
       setBuildStatus({ status: 'in_progress', triggeredAt: now, artifactUrl: actionUrl });
     } catch (e) {
@@ -389,13 +348,13 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                       </div>
                       <div className="flex-1 overflow-y-auto custom-scrollbar pt-4">
                         <FileTree 
-                          files={project.files} 
+                          files={files} 
                           activeId={activeFileId} 
                           onSelect={(id) => {
                             setActiveFileId(id);
                           }} 
                           projectId={project.id}
-                          onUpdate={(files) => onUpdateProject({ ...project, files })}
+                          onUpdate={(updatedFiles) => onUpdateProject({ ...project, files: updatedFiles })}
                         />
                       </div>
                     </>
@@ -544,57 +503,6 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
           </div>
         </div>
       )}
-
-      {/* Repository Bottom Sheet */}
-      <div 
-        className={`fixed inset-0 z-[300] transition-opacity duration-300 ease-in-out ${
-          isRepoSheetOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div
-          onClick={() => setIsRepoSheetOpen(false)}
-          className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-        />
-        <div
-          className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-2xl z-[301] max-h-[85vh] flex flex-col transform transition-transform duration-[250ms] ease-[cubic-bezier(0.2,0,0,1)] ${
-            isRepoSheetOpen ? 'translate-y-0' : 'translate-y-full'
-          }`}
-        >
-          <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2 shrink-0" />
-          
-          <div className="px-6 py-4 flex items-center justify-between border-b border-gray-50 shrink-0">
-            <div>
-              <h2 className="text-lg font-black text-[#1a1a1a] uppercase tracking-tight italic">Выберите репозиторий</h2>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Connect your code to GitHub</p>
-            </div>
-            <button 
-              onClick={() => setIsRepoSheetOpen(false)}
-              className="p-2 bg-gray-50 rounded-full text-gray-400 hover:text-black transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-            <RepoList 
-              repos={userRepos} 
-              githubConfig={githubConfig} 
-              onSelect={handleRepoSelect} 
-            />
-          </div>
-
-          <div className="p-6 bg-gray-50/50 border-t border-gray-100 shrink-0">
-            <div className="flex items-center gap-3 text-gray-400">
-              <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center">
-                <Github size={16} />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest leading-none">
-                Showing your latest repositories
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
