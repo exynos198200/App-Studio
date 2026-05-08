@@ -8,6 +8,9 @@ import { Project, FileNode, GitHubConfig, BuildStatus } from '../types';
 import FileTree from './FileTree';
 import Editor from './Editor';
 import { QRCodeSVG } from 'qrcode.react';
+import { useSettings } from '../context/SettingsContext';
+import SettingsModal from './SettingsModal';
+import AgentPanel from './AgentPanel';
 import { 
   ArrowLeft, 
   Play, 
@@ -29,7 +32,9 @@ import {
   Check,
   Folder,
   FolderCode,
-  ChevronDown
+  ChevronDown,
+  MessageSquare,
+  Bot
 } from 'lucide-react';
 import { githubService } from '../services/githubService';
 import { useAuth } from '../context/AuthContext';
@@ -87,6 +92,7 @@ interface IDEProps {
 
 export default function IDE({ project, onUpdateProject, onDeleteProject, onBack }: IDEProps) {
   const { user, logout } = useAuth();
+  const { t } = useSettings();
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [githubConfig, setGithubConfig] = useState<GitHubConfig | null>(null);
   const [userRepos, setUserRepos] = useState<any[]>([]);
@@ -94,9 +100,11 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   const [buildStatus, setBuildStatus] = useState<BuildStatus>({ status: 'idle' });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<'files' | 'agent'>('files');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [isRepoSheetOpen, setIsRepoSheetOpen] = useState(false);
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
 
   // Load github config from Firestore
   useEffect(() => {
@@ -114,16 +122,16 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
     return () => window.removeEventListener('github-auth-success', loadSettings);
   }, [user]);
 
-  // Fetch repos when settings open
+  // Fetch repos when github modal open
   useEffect(() => {
-    if (isSettingsOpen && githubConfig?.token) {
+    if (isGithubModalOpen && githubConfig?.token) {
       setIsLoadingRepos(true);
       githubService.getUserRepos(githubConfig.token)
         .then(setUserRepos)
         .catch(console.error)
         .finally(() => setIsLoadingRepos(false));
     }
-  }, [isSettingsOpen, githubConfig?.token]);
+  }, [isGithubModalOpen, githubConfig?.token]);
 
   const activeFile = project.files.find(f => f.id === activeFileId);
 
@@ -180,7 +188,7 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
 
   const handleBuild = async () => {
     if (!githubConfig) {
-      setIsSettingsOpen(true);
+      setIsGithubModalOpen(true);
       return;
     }
     const now = Date.now();
@@ -196,30 +204,58 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
   };
 
   return (
-    <div className="flex h-screen bg-[#f3f3f3] overflow-hidden text-[#1a1a1a] font-sans selection:bg-gray-200">
+    <div className="flex h-screen bg-[#f3f3f3] dark:bg-[#0d0d0d] overflow-hidden text-[#1a1a1a] dark:text-white font-sans selection:bg-gray-200">
       {/* Activity Bar - Dark Neutral */}
-      <div className="hidden md:flex w-12 bg-[#1a1a1a] flex-col items-center py-4 gap-4 shrink-0 z-50">
-        <button onClick={onBack} className="p-2 text-gray-500 hover:text-white transition-colors">
+      <div className="hidden md:flex w-12 bg-[#1a1a1a] dark:bg-[#050505] flex-col items-center py-4 gap-4 shrink-0 z-50 border-r border-[#222]">
+        <button onClick={onBack} title={t('ide.back')} className="p-2 text-gray-500 hover:text-white transition-colors">
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1 w-full flex flex-col items-center gap-4">
+        <div className="flex-1 w-full flex flex-col items-center gap-4 pt-4">
           <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`p-2 transition-colors ${isSidebarOpen ? 'text-white' : 'text-gray-600 hover:text-white'}`}
-            title="Explorer"
+            onClick={() => {
+              if (sidebarTab === 'files' && isSidebarOpen) {
+                setIsSidebarOpen(false);
+              } else {
+                setSidebarTab('files');
+                setIsSidebarOpen(true);
+              }
+            }}
+            className={`p-2 transition-colors ${isSidebarOpen && sidebarTab === 'files' ? 'text-white' : 'text-gray-600 hover:text-white'}`}
+            title={t('ide.files')}
           >
             <File size={20} />
           </button>
           <button 
+            onClick={() => {
+              if (sidebarTab === 'agent' && isSidebarOpen) {
+                setIsSidebarOpen(false);
+              } else {
+                setSidebarTab('agent');
+                setIsSidebarOpen(true);
+              }
+            }}
+            className={`p-2 transition-colors ${isSidebarOpen && sidebarTab === 'agent' ? 'text-white' : 'text-gray-600 hover:text-white'}`}
+            title={t('ide.agent')}
+          >
+            <Bot size={20} />
+          </button>
+          <button 
             onClick={handleBuild}
-            title="Build APK"
-            className={`p-2 transition-colors ${buildStatus.status !== 'idle' ? 'text-gray-300' : 'text-gray-600 hover:text-white'}`}
+            title={t('ide.build')}
+            className={`p-2 transition-colors ${buildStatus.status !== 'idle' ? 'text-blue-500' : 'text-gray-600 hover:text-white'}`}
           >
             <CloudUpload size={20} />
           </button>
           <button 
+            onClick={() => setIsGithubModalOpen(true)}
+            title="GitHub Sync"
+            className="p-2 text-gray-600 hover:text-white transition-colors"
+          >
+            <Github size={20} />
+          </button>
+          <button 
             onClick={() => setIsSettingsOpen(true)}
-            title="Settings"
+            title={t('ide.settings')}
             className="p-2 text-gray-600 hover:text-white transition-colors"
           >
             <Settings size={20} />
@@ -326,42 +362,52 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
           <div className="flex-1 flex overflow-hidden relative">
               {/* Explorer Sidebar */}
               {(isSidebarOpen && (!activeFileId || window.innerWidth >= 768)) && (
-                <aside className="w-full md:w-64 flex flex-col vs-sidebar shrink-0 shadow-lg z-40 border-r border-gray-200 bg-white">
-                  <div className="vs-header justify-between shrink-0 bg-[#e8e8e8]">
-                    <span className="text-[9px] font-black tracking-[0.2em]">Workspace</span>
-                    <Terminal size={12} className="opacity-40" />
-                  </div>
-                  <div className="flex-1 overflow-y-auto custom-scrollbar pt-4">
-                    <FileTree 
-                      files={project.files} 
-                      activeId={activeFileId} 
-                      onSelect={(id) => {
-                        setActiveFileId(id);
-                      }} 
-                      projectId={project.id}
-                      onUpdate={(files) => onUpdateProject({ ...project, files })}
+                <aside className="w-full md:w-80 flex flex-col vs-sidebar shrink-0 shadow-lg z-40 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a]">
+                  {sidebarTab === 'files' ? (
+                    <>
+                      <div className="vs-header justify-between shrink-0 bg-[#e8e8e8] dark:bg-[#262626] dark:text-gray-300">
+                        <span className="text-[9px] font-black tracking-[0.2em]">{t('ide.files')}</span>
+                        <Terminal size={12} className="opacity-40" />
+                      </div>
+                      <div className="flex-1 overflow-y-auto custom-scrollbar pt-4">
+                        <FileTree 
+                          files={project.files} 
+                          activeId={activeFileId} 
+                          onSelect={(id) => {
+                            setActiveFileId(id);
+                          }} 
+                          projectId={project.id}
+                          onUpdate={(files) => onUpdateProject({ ...project, files })}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <AgentPanel 
+                      project={project}
+                      currentFile={activeFile || null}
+                      onUpdateProject={onUpdateProject}
                     />
-                  </div>
+                  )}
                 </aside>
               )}
 
               {/* Editor Area */}
               {(activeFileId || window.innerWidth >= 768) && (
-                <main className={`flex-1 flex flex-col min-w-0 bg-[#ffffff] relative z-30 transition-all ${
-                  activeFileId && window.innerWidth < 768 ? 'fixed inset-0 top-[96px] z-50' : ''
+                <main className={`flex-1 flex flex-col min-w-0 bg-[#ffffff] dark:bg-[#0d0d0d] relative z-30 transition-all ${
+                  activeFileId && window.innerWidth < 768 ? 'fixed inset-0 top-[48px] z-50' : ''
                 }`}>
                   {activeFile ? (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                      <div className="vs-header justify-between shrink-0 bg-[#f8f8f8] border-b border-gray-200">
+                      <div className="vs-header justify-between shrink-0 bg-[#f8f8f8] dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-3 overflow-hidden">
                           <button 
                             onClick={() => setActiveFileId(null)} 
-                            className="md:hidden p-1 text-gray-400 hover:text-black"
+                            className="md:hidden p-1 text-gray-400 hover:text-black dark:hover:text-white"
                           >
                             <ArrowLeft size={16} />
                           </button>
-                          <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-gray-300" />
-                          <span className="text-[10px] text-gray-800 font-black font-mono truncate tracking-tight">{activeFile.path}</span>
+                          <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700" />
+                          <span className="text-[10px] text-gray-800 dark:text-gray-300 font-black font-mono truncate tracking-tight">{activeFile.path}</span>
                         </div>
                         <div className="flex gap-2 md:gap-6">
                           {buildStatus.status !== 'idle' && (
@@ -374,14 +420,14 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                             onClick={handleBuild}
                             disabled={buildStatus.status === 'in_progress'}
                             id="build-apk-btn"
-                            className="flex items-center gap-1.5 md:gap-2 px-3 md:px-8 py-1.5 md:py-2 bg-[#1a1a1a] hover:bg-black text-white text-[9px] md:text-[10px] font-black rounded-lg shadow-2xl transition-all disabled:opacity-50 uppercase tracking-[0.1em] md:tracking-[0.15em] border border-white/10"
+                            className="flex items-center gap-1.5 md:gap-2 px-3 md:px-8 py-1.5 md:py-2 bg-[#1a1a1a] dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-black text-[9px] md:text-[10px] font-black rounded-lg shadow-2xl transition-all disabled:opacity-50 uppercase tracking-[0.1em] md:tracking-[0.15em] border border-white/10 dark:border-black/5"
                           >
                             <Play size={10} fill="currentColor" />
-                            <span className="hidden xs:inline">BUILD</span>
+                            <span className="hidden xs:inline">{t('ide.build')}</span>
                           </button>
                         </div>
                       </div>
-                      <div className="flex-1 relative bg-white">
+                      <div className="flex-1 relative bg-white dark:bg-[#0d0d0d]">
                         <Editor 
                           content={activeFile.content || ''} 
                           onChange={handleFileChange} 
@@ -396,16 +442,16 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                       </div>
                     </div>
                   ) : (
-                    <div className="hidden md:flex flex-1 flex-col items-center justify-center p-12 bg-[#ffffff]">
-                      <div className="w-32 h-32 bg-[#eeeeee] rounded-full flex items-center justify-center mb-10 shadow-inner">
-                        <Terminal size={48} strokeWidth={1} className="text-gray-300" />
+                    <div className="hidden md:flex flex-1 flex-col items-center justify-center p-12 bg-[#ffffff] dark:bg-[#0d0d0d]">
+                      <div className="w-32 h-32 bg-[#eeeeee] dark:bg-[#1a1a1a] rounded-full flex items-center justify-center mb-10 shadow-inner">
+                        <Terminal size={48} strokeWidth={1} className="text-gray-300 dark:text-gray-700" />
                       </div>
-                      <h2 className="text-2xl font-black text-[#1a1a1a] uppercase italic tracking-tighter">APP STUDIO IDE</h2>
+                      <h2 className="text-2xl font-black text-[#1a1a1a] dark:text-white uppercase italic tracking-tighter">{t('dashboard.title')} IDE</h2>
                       <p className="text-[11px] text-gray-400 mt-4 text-center max-w-[280px] leading-relaxed font-medium uppercase tracking-widest">
                         Professional development target: {project.framework.toUpperCase()}
                       </p>
                       <div className="mt-12 flex gap-4">
-                        <div className="px-4 py-2 bg-[#f3f3f3] rounded text-[9px] text-gray-400 font-black uppercase tracking-widest">Select file to begin</div>
+                        <div className="px-4 py-2 bg-[#f3f3f3] dark:bg-[#1a1a1a] rounded text-[9px] text-gray-400 font-black uppercase tracking-widest">Select file to begin</div>
                       </div>
                     </div>
                   )}
@@ -415,26 +461,28 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
         </div>
       </div>
 
-      {/* Settings Dialog */}
-      {isSettingsOpen && (
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      {/* GitHub Sync dialog (formerly settings) */}
+      {isGithubModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/10 backdrop-blur-[1px]">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-black/5">
-            <div className="bg-[#f3f3f3] px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-black/5">
+            <div className="bg-[#f3f3f3] dark:bg-[#262626] px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-2">
                 <Github size={18} />
                 GitHub Repository
               </h2>
-              <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-700">
+              <button onClick={() => setIsGithubModalOpen(false)} className="text-gray-400 hover:text-gray-700">
                 <X size={18} />
               </button>
             </div>
             <div className="p-8 space-y-6">
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Connected Account</p>
                 <div className="flex items-center gap-3">
                   {user?.avatar_url && <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-lg shadow-sm" />}
                   <div>
-                    <p className="text-xs font-bold text-blue-900">{user?.login || 'GitHub User'}</p>
+                    <p className="text-xs font-bold text-blue-900 dark:text-blue-300">{user?.login || 'GitHub User'}</p>
                     <p className="text-[10px] text-blue-400 font-medium tracking-tight">Personal Access Token</p>
                   </div>
                 </div>
@@ -443,18 +491,18 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Target Repository</label>
                 {isLoadingRepos ? (
-                  <div className="h-12 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center gap-3">
+                  <div className="h-12 bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-gray-800 rounded-lg flex items-center justify-center gap-3">
                     <RefreshCw size={14} className="animate-spin text-gray-400" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Fetching Repositories...</span>
                   </div>
                 ) : (
                   <button
                     onClick={() => setIsRepoSheetOpen(true)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all flex items-center justify-between"
+                    className="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-lg px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <FolderCode size={18} className="text-gray-400" />
-                      <span className="font-bold text-gray-700">
+                      <span className="font-bold text-gray-700 dark:text-white">
                         {githubConfig?.repo ? `${githubConfig.owner}/${githubConfig.repo}` : 'Select a repository'}
                       </span>
                     </div>
@@ -464,7 +512,7 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                 <p className="text-[9px] text-gray-400 mt-2 uppercase tracking-tight font-medium">This repository will receive project files and trigger GitHub Actions.</p>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                 {isDeleting ? (
                   <button
                     onClick={() => {
@@ -478,15 +526,15 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                 ) : (
                   <button
                     onClick={() => setIsDeleting(true)}
-                    className="px-4 py-2.5 text-[10px] font-black text-red-500 hover:bg-red-50 rounded-lg transition-colors uppercase tracking-widest"
+                    className="px-4 py-2.5 text-[10px] font-black text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors uppercase tracking-widest"
                   >
                     DELETE PROJECT
                   </button>
                 )}
                 <div className="flex-1" />
                 <button
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg font-bold text-[10px] transition-all"
+                  onClick={() => setIsGithubModalOpen(false)}
+                  className="px-4 py-2.5 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg font-bold text-[10px] transition-all"
                 >
                   CANCEL
                 </button>
@@ -495,9 +543,9 @@ export default function IDE({ project, onUpdateProject, onDeleteProject, onBack 
                     if (githubConfig && user) {
                       await firebaseService.saveSettings(user.uid, githubConfig);
                     }
-                    setIsSettingsOpen(false);
+                    setIsGithubModalOpen(false);
                   }}
-                  className="px-4 py-2.5 bg-black text-white rounded-lg font-bold text-[10px] shadow-sm transition-all"
+                  className="px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-lg font-bold text-[10px] shadow-sm transition-all"
                 >
                   SAVE & SYNC
                 </button>
