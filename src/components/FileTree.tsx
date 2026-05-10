@@ -237,30 +237,9 @@ export default function FileTree({ files, activeId, onSelect, onUpdate }: FileTr
         )}
 
         {visibleFiles.length === 0 && !creatingType && (
-          <div className="flex flex-col items-center justify-center py-20 px-8 text-center select-none">
-            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mb-6">
-              <FolderPlus size={32} className="text-gray-300" />
-            </div>
-            <p className="text-[12px] font-black text-[#1a1a1a] uppercase tracking-tighter italic mb-2">Project is Empty</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed mb-8">
-              Start by creating your first file or structural folder
-            </p>
-            <div className="flex flex-col w-full gap-3">
-              <button 
-                onClick={() => { setCreatingType('file'); setTempName(''); }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] hover:bg-black text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg"
-              >
-                <Plus size={14} />
-                Create Index File
-              </button>
-              <button 
-                onClick={() => { setCreatingType('folder'); setTempName(''); }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-100 text-gray-400 hover:text-black hover:border-gray-200 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
-              >
-                <FolderPlus size={14} />
-                Add Source Folder
-              </button>
-            </div>
+          <div className="flex flex-col items-center justify-center py-12 opacity-30 select-none">
+            <FolderPlus size={32} />
+            <p className="text-[10px] font-black uppercase mt-3 tracking-widest text-center px-6">Folder is empty</p>
           </div>
         )}
       </div>

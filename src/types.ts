@@ -12,18 +12,7 @@ export interface FileNode {
   path: string;
 }
 
-export type Theme = 'dark' | 'light';
-export type Language = 'en' | 'ru';
-
-export type AIProvider = 'openai' | 'anthropic' | 'google';
-
-export interface AISettings {
-  provider: AIProvider;
-  model: string;
-  apiKey: string;
-}
-
-export type Framework = 'react-vite' | 'kotlin-android' | 'node-server' | 'empty';
+export type Framework = 'react-native' | 'kotlin';
 
 export interface Project {
   id: string;

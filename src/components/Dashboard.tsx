@@ -19,27 +19,16 @@ interface DashboardProps {
   onSelectProject: (id: string) => void;
 }
 
-import { useSettings } from '../context/SettingsContext';
-
 export default function Dashboard({ projects, onCreateProject, onDeleteProject, onSelectProject }: DashboardProps) {
   const { user, logout } = useAuth();
-  const { t } = useSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [selectedFramework, setSelectedFramework] = useState<Framework>('react-vite');
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredProjects = projects.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const templates: { id: Framework; label: string; icon: React.ReactNode }[] = [
-    { id: 'react-vite', label: t('templates.react'), icon: <Smartphone size={24} /> },
-    { id: 'kotlin-android', label: t('templates.kotlin'), icon: <Smartphone size={24} /> },
-    { id: 'node-server', label: t('templates.node'), icon: <FolderCode size={24} /> },
-    { id: 'empty', label: t('templates.empty'), icon: <Plus size={24} /> },
-  ];
 
   const handleDownload = async (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
@@ -61,9 +50,9 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
         <div className="flex justify-between items-start w-full md:w-auto">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-[#1a1a1a] tracking-tight uppercase italic">
-              {t('dashboard.title')}
+              App Studio
             </h1>
-            <p className="text-[#666] mt-1 font-medium text-xs sm:text-sm">{t('dashboard.subtitle')}</p>
+            <p className="text-[#666] mt-1 font-medium text-xs sm:text-sm">Professional mobile development platform.</p>
           </div>
           
           {/* Mobile User Profile (only shown when not on desktop) */}
@@ -129,7 +118,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#1a1a1a] hover:bg-[#333] text-white px-4 sm:px-6 py-3 rounded-lg font-black text-[10px] sm:text-xs tracking-widest transition-all shadow-xl shadow-gray-200/50 uppercase whitespace-nowrap"
           >
             <Plus size={18} strokeWidth={3} />
-            {t('dashboard.create')}
+            CREATE PROJECT
           </button>
         </div>
       </header>
@@ -138,7 +127,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
         <input
           type="text"
-          placeholder={t('dashboard.filter')}
+          placeholder="Filter projects..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-[#e8e8e8] border border-transparent rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:bg-white focus:ring-1 focus:ring-gray-300 transition-all placeholder:text-gray-500 text-sm font-medium"
@@ -159,7 +148,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
             >
               <div className="flex justify-between items-start mb-8">
                 <div className={`p-4 rounded-xl bg-white border border-gray-100 shadow-sm text-gray-600 group-hover:text-black group-hover:scale-110 transition-all`}>
-                  {project.framework === 'node-server' ? <FolderCode size={24} /> : <Smartphone size={24} />}
+                  {project.framework === 'react-native' ? <Smartphone size={24} /> : <FolderCode size={24} />}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -208,7 +197,7 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
               <h3 className="text-xl font-black text-[#1a1a1a] mb-2 uppercase tracking-tight">{project.name}</h3>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black uppercase bg-[#1a1a1a] text-white px-2 py-0.5 rounded tracking-widest">
-                  {project.framework}
+                  {project.framework === 'react-native' ? 'React Native' : 'Kotlin'}
                 </span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
                   <Calendar size={10} />
@@ -225,30 +214,30 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
           <div className="w-32 h-32 bg-[#eeeeee] rounded-full flex items-center justify-center mb-10 shadow-inner">
             <Smartphone size={48} className="text-gray-300" />
           </div>
-          <h2 className="text-2xl font-black text-[#1a1a1a] uppercase italic tracking-tighter">{t('dashboard.no_projects')}</h2>
+          <h2 className="text-2xl font-black text-[#1a1a1a] uppercase italic tracking-tighter">No projects found</h2>
           <p className="text-gray-400 mt-3 max-w-sm leading-relaxed font-medium">
-            {t('dashboard.no_projects_desc')}
+            Start by creating a new mobile project. Everything is monochromatic and professional.
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
             className="mt-10 px-10 py-4 bg-[#1a1a1a] hover:bg-black text-white rounded-lg font-black text-xs uppercase tracking-widest shadow-2xl transition-all"
           >
-            {t('dashboard.create')}
+            Create Your First Project
           </button>
         </div>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-[4px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-[2px]">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-2xl shadow-3xl overflow-y-auto max-h-[90vh] no-scrollbar"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-md shadow-2xl"
           >
-            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-b border-gray-100 pb-4">{t('dashboard.new_project')}</h2>
+            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-8 border-b border-gray-100 pb-4">New Project Information</h2>
             <div className="space-y-8">
               <div>
-                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">{t('dashboard.project_name')}</label>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Project Name</label>
                 <input
                   autoFocus
                   type="text"
@@ -259,30 +248,18 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                 />
               </div>
               
-              <div>
-                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">{t('dashboard.select_template')}</label>
-                <div className="grid grid-cols-2 gap-4">
-                  {templates.map(template => (
-                    <button
-                      key={template.id}
-                      onClick={() => setSelectedFramework(template.id)}
-                      className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all ${
-                        selectedFramework === template.id 
-                          ? 'border-gray-900 bg-gray-50' 
-                          : 'border-transparent bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <div className={selectedFramework === template.id ? 'text-black scale-110 transition-transform' : 'text-gray-400'}>
-                        {template.icon}
-                      </div>
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        selectedFramework === template.id ? 'text-black' : 'text-gray-500'
-                      }`}>
-                        {template.label}
-                      </span>
-                    </button>
+              <div className="bg-[#f9f9f9] border border-gray-100 rounded-xl p-4">
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Supported Environments</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['React', 'Kotlin', 'Flutter', 'Python', 'Node.js', 'Electron', 'Tauri'].map(lang => (
+                    <span key={lang} className="text-[9px] font-bold text-gray-500 bg-white border border-gray-100 px-2 py-1 rounded">
+                      {lang}
+                    </span>
                   ))}
                 </div>
+                <p className="text-[8px] text-gray-400 mt-2 uppercase tracking-tight leading-relaxed">
+                  Note: Automatic file creation is disabled. You must manually create the project structure.
+                </p>
               </div>
 
               <div className="flex gap-4 pt-4">
@@ -290,18 +267,18 @@ export default function Dashboard({ projects, onCreateProject, onDeleteProject, 
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 px-4 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-black transition-colors"
                 >
-                  {t('dashboard.cancel')}
+                  CANCEL
                 </button>
                 <button
                   disabled={!newName}
                   onClick={() => {
-                    onCreateProject(newName, selectedFramework);
+                    onCreateProject(newName, 'react-native');
                     setIsModalOpen(false);
                     setNewName('');
                   }}
                   className="flex-1 px-4 py-4 bg-[#1a1a1a] hover:bg-black disabled:opacity-30 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-gray-900/20"
                 >
-                  {t('dashboard.create')}
+                  CREATE PROJECT
                 </button>
               </div>
             </div>
